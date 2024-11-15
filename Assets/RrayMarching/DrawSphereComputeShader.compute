@@ -1,0 +1,60 @@
+#pragma kernel DrawSphere
+
+RWTexture2D<float4> _Result;
+
+float3 _SphereWorldPos;
+float _SphereRadius;
+int _TextureResolution;
+float3 _LightDirection;
+
+float3 _CameraPosition;
+float2 _CameraData; //x:fov, y:aspect ratio
+
+float3 GetPixelRayDir(float2 pixelXY, float fov, float aspect )
+{    
+    float2 ndcXY = (pixelXY / _TextureResolution) * 2.0 - 1.0; //ndc range -1 ~ 1
+    float tanHalfFov = tan(fov * 0.5); 
+    float pixelY = ndcXY.y * tanHalfFov;
+    float pixelX = ndcXY.x * tanHalfFov * aspect;
+    
+    return normalize(float3(pixelX, pixelY, 1));
+}
+
+float IsSphereContactWithRay(float3 pixelRay, float3 cameraPos, float3 sphereWorldPos, float sphereRadius )
+{
+    float3 cameraToSphereVector = sphereWorldPos - cameraPos;
+    float camToSphereLength = length(cameraToSphereVector);
+    if(camToSphereLength < sphereRadius) //inside the sphere
+    {
+        return -1;
+    }
+
+    float dotRayL = dot(cameraToSphereVector, pixelRay);    //斜邊(cameraToSphereVector)在射線方向上的投影
+    if(dotRayL < 0) //pixel ray和攝影機到圓心的向量方向相反
+    {
+        return -1;
+    }
+    float distanceSquared = camToSphereLength * camToSphereLength - dotRayL * dotRayL; //b^2 = c^2 - a^2 => b為像素到球心的最短距離 
+    float radiusSquared = sphereRadius * sphereRadius;
+    if(distanceSquared <= radiusSquared)
+    {
+        return 1;
+    }
+    return -1;
+}
+
+[numthreads(8,8,1)]
+void DrawSphere(uint3 id : SV_DispatchThreadID)
+{
+    float fov = _CameraData.x;
+    float aspect = _CameraData.y;
+    float3 cameraToPixelRay = GetPixelRayDir(id.xy, fov, aspect);
+    if(IsSphereContactWithRay(cameraToPixelRay, _CameraPosition, _SphereWorldPos, _SphereRadius) > 0)
+    {
+        _Result[id.xy] = float4(0, 0, 1, 1);
+    } else
+    {
+        _Result[id.xy] = float4(id.x  / 511.0, id.y  / 511.0, 0, 1);
+    }
+    
+}
