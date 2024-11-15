@@ -4,20 +4,20 @@ RWTexture2D<float4> _Result;
 
 float3 _SphereWorldPos;
 float _SphereRadius;
-int _TextureResolution;
+float2 _ScreenResolution;
 float3 _LightDirection;
 
 float3 _CameraPosition;
-float2 _CameraData; //x:fov, y:aspect ratio
+//CameraMatrix
+float4x4 _CameraInvViewProj;
 
-float3 GetPixelRayDir(float2 pixelXY, float fov, float aspect )
-{    
-    float2 ndcXY = (pixelXY / _TextureResolution) * 2.0 - 1.0; //ndc range -1 ~ 1
-    float tanHalfFov = tan(fov * 0.5); 
-    float pixelY = ndcXY.y * tanHalfFov;
-    float pixelX = ndcXY.x * tanHalfFov * aspect;
-    
-    return normalize(float3(pixelX, pixelY, 1));
+float3 GetPixelRayDir(float2 pixelXY )
+{
+    float2 uv = (pixelXY.xy / float2(_ScreenResolution.x, _ScreenResolution.y)) * 2.0 - 1.0;
+    float4 ndcPos = float4(uv, 1.0, 1.0);
+    float4 worldPos = mul(_CameraInvViewProj, ndcPos);
+    worldPos /= worldPos.w;
+    return normalize(worldPos.xyz - _CameraPosition);
 }
 
 float IsSphereContactWithRay(float3 pixelRay, float3 cameraPos, float3 sphereWorldPos, float sphereRadius )
@@ -38,7 +38,10 @@ float IsSphereContactWithRay(float3 pixelRay, float3 cameraPos, float3 sphereWor
     float radiusSquared = sphereRadius * sphereRadius;
     if(distanceSquared <= radiusSquared)
     {
-        return 1;
+        float dist = radiusSquared - distanceSquared;   //一樣由勾股定理得到球體表面到像素最近點的距離平方
+        dist = sqrt(dist);
+        float distToSphere = dotRayL - dist;
+        return distToSphere;
     }
     return -1;
 }
@@ -46,12 +49,18 @@ float IsSphereContactWithRay(float3 pixelRay, float3 cameraPos, float3 sphereWor
 [numthreads(8,8,1)]
 void DrawSphere(uint3 id : SV_DispatchThreadID)
 {
-    float fov = _CameraData.x;
-    float aspect = _CameraData.y;
-    float3 cameraToPixelRay = GetPixelRayDir(id.xy, fov, aspect);
-    if(IsSphereContactWithRay(cameraToPixelRay, _CameraPosition, _SphereWorldPos, _SphereRadius) > 0)
+    float3 cameraToPixelRay = GetPixelRayDir(id.xy);
+    float distToSphere = IsSphereContactWithRay(cameraToPixelRay, _CameraPosition, _SphereWorldPos, _SphereRadius);
+    if(IsSphereContactWithRay(cameraToPixelRay, _CameraPosition, _SphereWorldPos, _SphereRadius) >= 0)
     {
-        _Result[id.xy] = float4(0, 0, 1, 1);
+        float3 pos = _CameraPosition + cameraToPixelRay * distToSphere;
+        float3 normal = normalize(pos - _SphereWorldPos);
+        float diffuse = dot(normal, _LightDirection);
+        float3 halfDir = normalize(_LightDirection - cameraToPixelRay);
+        float spec = pow(dot(halfDir, normal), 20);
+
+        float3 color = diffuse * half3(0,0,1) + spec;
+        _Result[id.xy] = float4(color, 1);
     } else
     {
         _Result[id.xy] = float4(id.x  / 511.0, id.y  / 511.0, 0, 1);

@@ -34,7 +34,7 @@ public class DrawSphereByCS : MonoBehaviour
     {
         if ( renderTexture == null )
         {
-            renderTexture = new RenderTexture(textureResolution, textureResolution, 24, format: GraphicsFormat.R32G32B32A32_SFloat);
+            renderTexture = new RenderTexture(Screen.width, Screen.height, 24, format: GraphicsFormat.R32G32B32A32_SFloat);
             renderTexture.filterMode = FilterMode.Bilinear;
             renderTexture.name = "_DrawSphereRT";
             renderTexture.enableRandomWrite = true;
@@ -44,14 +44,20 @@ public class DrawSphereByCS : MonoBehaviour
         kernelID = ComputeShader.FindKernel( "DrawSphere" );
         ComputeShader.SetTexture( kernelID, "_Result", renderTexture );
         ComputeShader.SetFloat( "_SphereRadius", sphereRadius );
-        ComputeShader.SetInt( "_TextureResolution", textureResolution );
-        
-        var mainCamera = Camera.main;
-        ComputeShader.SetVector( "_CameraData", new Vector2( mainCamera.fieldOfView, mainCamera.aspect ) );
+        ComputeShader.SetVector( "_ScreenResolution", new Vector2( Screen.width, Screen.height ) );
     }
 
     private void Update()
     {
+        var camera = Camera.main;
+        #region CameraMatrix
+
+        ComputeShader.SetMatrix("_CameraProjection", camera.projectionMatrix);
+        ComputeShader.SetMatrix("_CameraView", camera.worldToCameraMatrix);
+        ComputeShader.SetMatrix("_CameraInvViewProj", (camera.projectionMatrix * camera.worldToCameraMatrix).inverse);
+
+        #endregion
+        
         ComputeShader.SetVector( "_SphereWorldPos",transform.position );
         var lightDirection = DirectionalLight.transform.rotation * Vector3.back;
         ComputeShader.SetVector( "_LightDirection", lightDirection );
@@ -59,7 +65,7 @@ public class DrawSphereByCS : MonoBehaviour
         
         uint x, y, z;
         ComputeShader.GetKernelThreadGroupSizes(kernelID, out x, out y, out z);
-        ComputeShader.Dispatch(kernelID, textureResolution / (int)x, textureResolution / (int)y, 1);
+        ComputeShader.Dispatch(kernelID, Screen.width / (int)x, Screen.height / (int)y, 1);
     }
 
     private void DrawSphere( ScriptableRenderContext context, Camera renderCamera )
