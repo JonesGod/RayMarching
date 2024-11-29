@@ -1,4 +1,4 @@
-﻿Shader "URPShader/RayMarchingBasicShaderNew"
+﻿Shader "URPShader/RayMarchingBasicShader"
 {
     Properties
     {

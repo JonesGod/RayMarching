@@ -17,7 +17,6 @@
         HLSLINCLUDE
 
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-        #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
@@ -28,12 +27,25 @@
         float3 _SphereCenter;
         float _SphereRadius;
         float4 _BackgroundColor;
+        uniform float4x4 _CameraRayMatrix, _CamToWorldMatrix;
 
         CBUFFER_END
 
-        SamplerState sampler_BlitTexture;
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
+
+        struct Attributes
+        {
+            float4 positionOS : POSITION;
+            float2 texcoord : TEXCOORD0;
+        };
+
+        struct Varyings
+        {
+            float4 positionCS : SV_POSITION;
+            float2 uv : TEXCOORD0;
+            float3 rayWS : TEXCOORD1;
+        };
 
         ENDHLSL
 
@@ -41,12 +53,23 @@
         {
             HLSLPROGRAM
 
-            #pragma vertex Vert
+            #pragma vertex vert
             #pragma fragment frag
 
             #define MAX_STEPS 100
             #define MAX_DISTANCE 50.0
             #define DIST_TO_SURF 0.001
+
+            Varyings vert (Attributes input)
+            {
+                Varyings output;
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.uv = input.texcoord;
+
+                int index = (int)dot(input.texcoord, half2(1,2));
+                output.rayWS = mul(_CamToWorldMatrix, _CameraRayMatrix[index].xyz);
+                return output;
+            }
 
             float SphereSDF(float3 pointWS)
             {
@@ -109,6 +132,7 @@
                 // Reconstruct the world space positions.
                 float3 worldPos = ComputeWorldSpacePosition(UV, depth, UNITY_MATRIX_I_VP);
                 float3 rayDir = normalize(worldPos - _WorldSpaceCameraPos);
+                rayDir = input.rayWS;
                 
                 float3 hitPoint;
                 float hitDistance = Raymarch(_WorldSpaceCameraPos, rayDir, hitPoint);
@@ -127,7 +151,7 @@
                 }
                 else
                 {
-                    return SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, input.texcoord );
+                    return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv );
                 }
             }
             ENDHLSL

@@ -1,40 +1,40 @@
+using System.Numerics;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
-using Matrix4x4 = UnityEngine.Matrix4x4;
 using ProfilingScope = UnityEngine.Rendering.ProfilingScope;
-using Vector3 = UnityEngine.Vector3;
 
-public class RayMarchingRendererFeature : ScriptableRendererFeature
+public class BlitterRendererFeature : ScriptableRendererFeature
 {
     [System.Serializable]
-    public class RayMarchingSettings
+    public class BlitSettings
     {
         public RenderPassEvent RenderPassEvent = RenderPassEvent.AfterRenderingOpaques;
         public Material Material = null;
     }
-    public RayMarchingSettings RayMarchingSetting = new RayMarchingSettings ();
-    RayMarchingPass rayMarchingPass;
+    public BlitSettings BlitSetting = new BlitSettings ();
+    BlitPass blitPass;
 
     public override void Create()
     {
-        rayMarchingPass = new RayMarchingPass( RayMarchingSetting );
-        rayMarchingPass.renderPassEvent = RayMarchingSetting.RenderPassEvent;
+        blitPass = new BlitPass( BlitSetting );
+        blitPass.renderPassEvent = BlitSetting.RenderPassEvent;
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        renderer.EnqueuePass(rayMarchingPass);
+        renderer.EnqueuePass(blitPass);
     }
     
-    class RayMarchingPass : ScriptableRenderPass
+    class BlitPass : ScriptableRenderPass
     {
-        Material rayMarchingMaterial;
+        Material blitMaterial;
 
-        public RayMarchingPass( RayMarchingSettings setting )
+        public BlitPass( BlitSettings setting )
         {
-            rayMarchingMaterial = setting.Material;
+            blitMaterial = setting.Material;
         }
         
         private class PassData
@@ -49,31 +49,24 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
             
-            if ( rayMarchingMaterial == null )
+            if ( blitMaterial == null )
             {
-                Debug.LogError( "RayMarchingMaterial == null" );
+                Debug.LogError( "Material == null" );
                 return;
             }
-            rayMarchingMaterial.SetMatrix( "_CameraRayMatrix", GetCameraFrustum() );
-            rayMarchingMaterial.SetMatrix("_CamToWorldMatrix", Camera.main.cameraToWorldMatrix);
             
             // RasterPass ，UnsafePass ，ComputePass
-            using (var builder = renderGraph.AddUnsafePass<PassData>("RayMarchingPass", out var passData))
+            using (var builder = renderGraph.AddUnsafePass<PassData>("BlitPass", out var passData))
             {
                 UniversalCameraData cameraData = frameData.Get<UniversalCameraData> ();
                 UniversalResourceData resourceData = frameData.Get<UniversalResourceData> ();
-                
-                if ( cameraData.isPreviewCamera )
-                {
-                    return;
-                }
 
                 var desc = cameraData.cameraTargetDescriptor;
                 desc.depthBufferBits = 0;
                 desc.colorFormat = RenderTextureFormat.ARGB32;
                 
                 passData.sourceHandle = resourceData.activeColorTexture;
-                passData.material = rayMarchingMaterial;
+                passData.material = blitMaterial;
                 passData.tempCopy = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_TempCopy", true, FilterMode.Bilinear);
                 // Setup pass inputs and outputs through the builder interface. Eg:
                 // TextureHandle destination = UniversalRenderer.CreateRenderGraphTexture(renderGraph, cameraData.cameraTargetDescriptor, "Destination Texture", false);
@@ -88,7 +81,7 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
                 builder.AllowGlobalStateModification(false);
                 
                 // Assigns the ExecutePass function to the render pass delegate. This will be called by the render graph when executing the pass.
-                builder.SetRenderFunc((PassData data, UnsafeGraphContext context) =>  ExecutePass(data, context));
+                builder.SetRenderFunc((PassData data, UnsafeGraphContext context) => ExecutePass(data, context));
             }
         }
 
@@ -98,30 +91,9 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
             {
                 var commandBuffer = CommandBufferHelpers.GetNativeCommandBuffer(context.cmd);
 
-                commandBuffer.Blit ( data.sourceHandle, data.tempCopy, data.material );
-                commandBuffer.Blit ( data.tempCopy, data.sourceHandle );
+                Blitter.BlitCameraTexture ( commandBuffer, data.sourceHandle, data.tempCopy, data.material, 0 );
+                Blitter.BlitCameraTexture ( commandBuffer, data.tempCopy, data.sourceHandle, 0, true);
             }
-        }
-
-        Matrix4x4 GetCameraFrustum()
-        {
-            var mainCamera = Camera.main;
-            Matrix4x4 matrix = Matrix4x4.identity;
-
-            float tanHalfFOV = Mathf.Tan(mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
-            //ViewSpace
-            Vector3 top = Vector3.up * tanHalfFOV;
-            Vector3 right = Vector3.right * tanHalfFOV * mainCamera.aspect;
-            Vector3 TL = (-Vector3.forward + top - right).normalized;
-            Vector3 TR = (-Vector3.forward + top + right).normalized;
-            Vector3 BL = (-Vector3.forward - top - right).normalized;
-            Vector3 BR = (-Vector3.forward - top + right).normalized;
-            
-            matrix.SetRow( 0, BL );
-            matrix.SetRow( 1, BR );
-            matrix.SetRow( 2, TL );
-            matrix.SetRow( 3, TR );
-            return matrix;
         }
 
     }
