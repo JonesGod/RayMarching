@@ -51,15 +51,15 @@ void DrawSphere(uint3 id : SV_DispatchThreadID)
 {
     float3 cameraToPixelRay = GetPixelRayDir(id.xy);
     float distToSphere = IsSphereContactWithRay(cameraToPixelRay, _CameraPosition, _SphereWorldPos, _SphereRadius);
-    if(IsSphereContactWithRay(cameraToPixelRay, _CameraPosition, _SphereWorldPos, _SphereRadius) >= 0)
+    if(distToSphere >= 0)
     {
         float3 pos = _CameraPosition + cameraToPixelRay * distToSphere;
         float3 normal = normalize(pos - _SphereWorldPos);
         float diffuse = dot(normal, _LightDirection);
-        float3 halfDir = normalize(_LightDirection - cameraToPixelRay);
+        float3 halfDir = normalize(_LightDirection - cameraToPixelRay);//viewDirection = -cameraToPixelRay
         float spec = pow(dot(halfDir, normal), 20);
 
-        float3 color = diffuse * half3(0,0,1) + spec;
+        float3 color = diffuse * half3(1,1,1) + spec;
         _Result[id.xy] = float4(color, 1);
     } else
     {
