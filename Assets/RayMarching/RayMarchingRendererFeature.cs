@@ -48,14 +48,17 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
         // FrameData is a context container through which URP resources can be accessed and managed.
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            
             if ( rayMarchingMaterial == null )
             {
                 Debug.LogError( "RayMarchingMaterial == null" );
                 return;
             }
-            rayMarchingMaterial.SetMatrix( "_CameraRayMatrix", GetCameraFrustum() );
-            rayMarchingMaterial.SetMatrix("_CamToWorldMatrix", Camera.main.cameraToWorldMatrix);
+            
+            if ( RayMarchingObjsManager.Instance != null )
+            {
+                RayMarchingObjsManager.Instance.RefreshTransforms();
+                rayMarchingMaterial.SetVectorArray( "_Spheres", RayMarchingObjsManager.Instance.Spheres );
+            }
             
             // RasterPass ，UnsafePass ，ComputePass
             using (var builder = renderGraph.AddUnsafePass<PassData>("RayMarchingPass", out var passData))
@@ -63,10 +66,13 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
                 UniversalCameraData cameraData = frameData.Get<UniversalCameraData> ();
                 UniversalResourceData resourceData = frameData.Get<UniversalResourceData> ();
                 
-                if ( cameraData.isPreviewCamera )
-                {
-                    return;
-                }
+                rayMarchingMaterial.SetMatrix( "_CameraRayMatrix", GetCameraFrustum(cameraData.camera ) );
+                rayMarchingMaterial.SetMatrix("_CamToWorldMatrix", cameraData.camera.cameraToWorldMatrix);
+                
+                // if ( cameraData.isPreviewCamera )
+                // {
+                //     return;
+                // }
 
                 var desc = cameraData.cameraTargetDescriptor;
                 desc.depthBufferBits = 0;
@@ -98,20 +104,19 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
             {
                 var commandBuffer = CommandBufferHelpers.GetNativeCommandBuffer(context.cmd);
 
-                commandBuffer.Blit ( data.sourceHandle, data.tempCopy, data.material );
-                commandBuffer.Blit ( data.tempCopy, data.sourceHandle );
+                commandBuffer.Blit ( data.sourceHandle, data.tempCopy );
+                commandBuffer.Blit ( data.tempCopy, data.sourceHandle, data.material );
             }
         }
 
-        Matrix4x4 GetCameraFrustum()
+        Matrix4x4 GetCameraFrustum( Camera camera )
         {
-            var mainCamera = Camera.main;
             Matrix4x4 matrix = Matrix4x4.identity;
 
-            float tanHalfFOV = Mathf.Tan(mainCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            float tanHalfFOV = Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
             //ViewSpace
             Vector3 top = Vector3.up * tanHalfFOV;
-            Vector3 right = Vector3.right * tanHalfFOV * mainCamera.aspect;
+            Vector3 right = Vector3.right * tanHalfFOV * camera.aspect;
             Vector3 TL = (-Vector3.forward + top - right).normalized;
             Vector3 TR = (-Vector3.forward + top + right).normalized;
             Vector3 BL = (-Vector3.forward - top - right).normalized;
