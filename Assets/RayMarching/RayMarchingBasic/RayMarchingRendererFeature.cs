@@ -34,7 +34,7 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
 
         public RayMarchingPass( RayMarchingSettings setting )
         {
-            rayMarchingMaterial = setting.rayMarchingMaterial;
+            //rayMarchingMaterial = setting.rayMarchingMaterial;
         }
         
         private class PassData
@@ -48,36 +48,42 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
         // FrameData is a context container through which URP resources can be accessed and managed.
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            if ( rayMarchingMaterial == null )
+            var rayMarchingManager = RayMarchingObjsManager.Instance;
+            if ( rayMarchingManager == null )
             {
-                Debug.LogError( "RayMarchingMaterial == null" );
                 return;
             }
             
-            if ( RayMarchingObjsManager.Instance != null )
+            if ( rayMarchingManager.RayMarchingMaterial == null )
             {
-                // var rayMarchingManager = RayMarchingObjsManager.Instance;
-                // rayMarchingManager.RefreshTransforms();
-                // rayMarchingMaterial.SetBuffer( "_SphereBuffer", rayMarchingManager.sphereBuffer );
-                
-                RayMarchingObjsManager.Instance.RefreshTransforms();
-                rayMarchingMaterial.SetVectorArray( "_Spheres", RayMarchingObjsManager.Instance.Spheres );
+                Debug.LogError( "RayMarchingObjsManager : RayMarchingMaterial == null" );
+                return;
+            }
+
+            if ( rayMarchingMaterial == null )
+            {
+                rayMarchingMaterial = rayMarchingManager.RayMarchingMaterial;
             }
             
-            // RasterPass ，UnsafePass ，ComputePass
+            //RasterPass ，UnsafePass ，ComputePass
             using (var builder = renderGraph.AddUnsafePass<PassData>("RayMarchingPass", out var passData))
             {
                 UniversalCameraData cameraData = frameData.Get<UniversalCameraData> ();
+                if ( cameraData.isPreviewCamera )
+                {
+                    return;
+                }
                 UniversalResourceData resourceData = frameData.Get<UniversalResourceData> ();
+                
+                rayMarchingManager.RefreshTransforms();
+                //rayMarchingMaterial.SetBuffer( "_SphereBuffer", rayMarchingManager.sphereBuffer );
+                //rayMarchingMaterial.SetTexture( "_Reflection_CubeMap", rayMarchingManager.ReflectionProbe.texture );
+                //rayMarchingManager.RefreshTransforms();
+                //rayMarchingMaterial.SetVectorArray( "_Spheres", RayMarchingObjsManager.Instance.Spheres );
                 
                 rayMarchingMaterial.SetMatrix( "_CameraRayMatrix", GetCameraFrustum(cameraData.camera ) );
                 rayMarchingMaterial.SetMatrix("_CamToWorldMatrix", cameraData.camera.cameraToWorldMatrix);
-                
-                // if ( cameraData.isPreviewCamera )
-                // {
-                //     return;
-                // }
-
+            
                 var desc = cameraData.cameraTargetDescriptor;
                 desc.depthBufferBits = 0;
                 desc.colorFormat = RenderTextureFormat.ARGB32;
@@ -100,6 +106,7 @@ public class RayMarchingRendererFeature : ScriptableRendererFeature
                 // Assigns the ExecutePass function to the render pass delegate. This will be called by the render graph when executing the pass.
                 builder.SetRenderFunc((PassData data, UnsafeGraphContext context) =>  ExecutePass(data, context));
             }
+            
         }
 
         void ExecutePass(PassData data, UnsafeGraphContext context)
