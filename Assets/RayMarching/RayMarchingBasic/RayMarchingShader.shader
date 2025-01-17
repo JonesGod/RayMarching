@@ -21,8 +21,9 @@
         struct Sphere
         {
             float3 position;
-            float radius;
+            float3 radius;
             float3 color;
+            float4x4 rotationMatrix;
         };
 
         CBUFFER_START(UnityPerMaterial)
@@ -85,8 +86,8 @@
                 float4 result = float4(planeColor, PlaneSDF(pointWS, float3(0, 1, 0), 0));
                 for ( int i = 0; i < 2; ++i)
                 {
-                    //float sphereSDF = SphereSDF(pointWS - _Spheres[i].xyz, _Spheres[i].w);
-                    float sphere = SphereSDF(pointWS - _SphereBuffer[i].position, _SphereBuffer[i].radius);
+                    //float sphere = SphereSDF(pointWS - _SphereBuffer[i].position, _SphereBuffer[i].radius.x);
+                    float sphere = SphereSDFNonUniform(pointWS - _SphereBuffer[i].position, _SphereBuffer[i].radius, 1.0, _SphereBuffer[i].rotationMatrix);
                     result = OpSmoothUnion(result, float4(_SphereBuffer[i].color, sphere), 0.5);
                 }
 

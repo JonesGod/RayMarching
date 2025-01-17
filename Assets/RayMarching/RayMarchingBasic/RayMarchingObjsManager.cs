@@ -1,5 +1,8 @@
 using System;
+using System.Numerics;
 using UnityEngine;
+using Matrix4x4 = UnityEngine.Matrix4x4;
+using Vector3 = UnityEngine.Vector3;
 
 public class RayMarchingObjsManager : MonoBehaviour
 {
@@ -38,8 +41,9 @@ public class RayMarchingObjsManager : MonoBehaviour
     private struct Sphere
     {
         public Vector3 position;
-        public float radius;
+        public Vector3 radius;
         public Vector3 color;
+        public Matrix4x4 rotationMatrix;
     }
     
     private void Awake()
@@ -62,14 +66,16 @@ public class RayMarchingObjsManager : MonoBehaviour
         for ( int i = 0; i < spheres.Length; ++i )
         {
             var color = RayMarchingSpheres[i].SphereBaseColor;
+            var sphereTransform = RayMarchingSpheres[i].transform;
             spheres[i].color = new Vector3(color.r, color.g, color.b);
-            spheres[i].position = RayMarchingSpheres[i].transform.position;
-            spheres[i].radius = RayMarchingSpheres[i].transform.localScale.x;
+            spheres[i].position = sphereTransform.position;
+            spheres[i].radius = new Vector3( sphereTransform.localScale.x, sphereTransform.localScale.y, sphereTransform.localScale.z );
+            spheres[i].rotationMatrix = Matrix4x4.Rotate(sphereTransform.rotation);
         }
         
         if ( sphereBuffer == null )
         {
-            sphereBuffer = new GraphicsBuffer( GraphicsBuffer.Target.Structured,spheres.Length, sizeof(float) * 7);
+            sphereBuffer = new GraphicsBuffer( GraphicsBuffer.Target.Structured,spheres.Length, sizeof(float) * 25);
         }
         sphereBuffer.SetData(spheres);
         RayMarchingMaterial.SetBuffer("_SphereBuffer", sphereBuffer);

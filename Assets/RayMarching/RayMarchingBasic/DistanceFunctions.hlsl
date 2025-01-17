@@ -1,8 +1,25 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+float3 RotateWithMatrix(float3 position, float4x4 rotationMatrix)
+{
+    return mul(position, (float3x3)rotationMatrix);
+}
 
 float SphereSDF(float3 positionWS, float radius)
 {
     return length(positionWS) - radius;
+}
+
+float SphereSDFNonUniform(float3 positionWS, float3 scale, float radius, float4x4 rotationMatrix )
+{
+    float3 rotatedPosition = RotateWithMatrix(positionWS, rotationMatrix);
+    // 將點p縮放到單位空間
+    float3 scaledP = rotatedPosition / scale;
+    // 計算SDF
+    float unscaledDistance = length(scaledP) - radius;
+    // 補回縮放造成的比例差異
+    //float scaleFactor = min(min(scale.x, scale.y), scale.z);
+    float scaleFactor = 1.0 / length(scale / max(scale.x, max(scale.y, scale.z)));
+    return unscaledDistance * scaleFactor;
 }
 
 float PlaneSDF( float3 positionWS, float3 normal, float height )
