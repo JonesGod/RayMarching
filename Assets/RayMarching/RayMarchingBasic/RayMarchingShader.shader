@@ -248,7 +248,7 @@
                 float eyeDepth = LinearEyeDepth(depth, _ZBufferParams);
                 
                 // Reconstruct the world space positions.
-                //float3 worldPos = ComputeWorldSpacePosition(UV, depth, UNITY_MATRIX_I_VP);
+                //float3 worldPos = ComputeWorldSpacePosition(screenPosUV, depth, UNITY_MATRIX_I_VP);
                 //float3 rayDir = normalize(worldPos - _WorldSpaceCameraPos);
                 float3 rayDir = normalize(input.rayWS);
                 
