@@ -44,8 +44,9 @@ MonoBehaviour:
   - {fileID: 7833122117494664109}
   - {fileID: -648440819534413825}
   - {fileID: 8607505902400451892}
+  - {fileID: 5954510039045464529}
   - {fileID: 3698112624758842512}
-  m_RendererFeatureMap: ad6b866f10d7b46cffbfc99d824600f73435a88203017477906423bad6555233
+  m_RendererFeatureMap: ad6b866f10d7b46cffbfc99d824600f73435a88203017477d161cd0855aba252906423bad6555233
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 0}
@@ -92,6 +93,24 @@ MonoBehaviour:
   shaderTagList:
   - UniversalForward
   overrideMaterial: {fileID: 2100000, guid: ae834ede760936f49a3bf91bb6343689, type: 2}
+--- !u!114 &5954510039045464529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e83ed7a250a0d74790a2642d75b0967, type: 3}
+  m_Name: RayMarchingVolumetricLightRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    RenderPassEvent: 550
+    volumetricLightMaterial: {fileID: 2100000, guid: 5f943fefb1c3b3f4bacc397c0f70486d, type: 2}
+    LoopTimes: 4
+    BlurRange: 2.93
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -139,7 +158,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 936feb3bddf25d447a6570f1ca9494e8, type: 3}
   m_Name: SSVolumetricLightRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     RenderPassEvent: 550
     SSVolumetricLightMaterial: {fileID: 2100000, guid: 1a509582ea2a50544adbc018549e54b0, type: 2}
