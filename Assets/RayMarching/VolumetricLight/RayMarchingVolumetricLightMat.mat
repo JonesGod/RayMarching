@@ -103,7 +103,7 @@ Material:
     - _GlossyReflections: 0
     - _Intensity: 0.4
     - _Metallic: 0
-    - _NUM_SAMPLES: 8
+    - _NUM_SAMPLES: 31.71
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0

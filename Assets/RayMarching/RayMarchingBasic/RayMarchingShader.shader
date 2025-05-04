@@ -36,6 +36,7 @@
         CBUFFER_END
         
         StructuredBuffer<Sphere> _SphereBuffer;
+        int _SphereCount;
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
         samplerCUBE _Reflection_CubeMap;
@@ -84,7 +85,7 @@
             {
                 float3 planeColor = float3(0,0,0);
                 float4 result = float4(planeColor, PlaneSDF(pointWS, float3(0, 1, 0), 0));
-                for ( int i = 0; i < 2; ++i)
+                for ( int i = 0; i < _SphereCount; ++i)
                 {
                     //float sphere = SphereSDF(pointWS - _SphereBuffer[i].position, _SphereBuffer[i].radius.x);
                     float sphere = SphereSDFNonUniform(pointWS - _SphereBuffer[i].position, _SphereBuffer[i].radius, 1.0, _SphereBuffer[i].rotationMatrix);

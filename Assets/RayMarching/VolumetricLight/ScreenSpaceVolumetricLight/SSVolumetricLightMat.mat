@@ -139,7 +139,7 @@ Material:
     - _BaseColor: {r: 1, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ScreenLightPos: {r: 0.4185275, g: 0.9543312, b: 0.8759825, a: 0}
+    - _ScreenLightPos: {r: 0.6068877, g: 0.9587675, b: 0.86751187, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

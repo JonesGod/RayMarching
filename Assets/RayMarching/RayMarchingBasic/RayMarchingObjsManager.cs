@@ -35,7 +35,11 @@ public class RayMarchingObjsManager : MonoBehaviour
     
     public ReflectionProbe ReflectionProbe;
     
+    public GameObject spheresParentObject;
+    
     GraphicsBuffer sphereBuffer;
+    
+    private int sphereCount;
 
     
     private struct Sphere
@@ -62,8 +66,19 @@ public class RayMarchingObjsManager : MonoBehaviour
 
     public void RefreshTransforms()
     {
+        var childSpheres = spheresParentObject.GetComponentsInChildren<RayMarchingSphere>();
+        if (sphereCount != childSpheres.Length)
+        {
+            sphereCount = childSpheres.Length;
+            RayMarchingSpheres = new RayMarchingSphere[sphereCount];
+            for (int i = 0; i < childSpheres.Length; ++i)
+            {
+                RayMarchingSpheres[i] = childSpheres[i];
+            }
+        }
+        
         Sphere[] spheres = new Sphere[RayMarchingSpheres.Length];
-        for ( int i = 0; i < spheres.Length; ++i )
+        for ( int i = 0; i < RayMarchingSpheres.Length; ++i )
         {
             var color = RayMarchingSpheres[i].SphereBaseColor;
             var sphereTransform = RayMarchingSpheres[i].transform;
@@ -73,12 +88,20 @@ public class RayMarchingObjsManager : MonoBehaviour
             spheres[i].rotationMatrix = Matrix4x4.Rotate(sphereTransform.rotation);
         }
         
-        if ( sphereBuffer == null )
+        if (sphereBuffer != null)
         {
-            sphereBuffer = new GraphicsBuffer( GraphicsBuffer.Target.Structured,spheres.Length, sizeof(float) * 25);
+            sphereBuffer.Release();
+            sphereBuffer = null;
         }
-        sphereBuffer.SetData(spheres);
-        RayMarchingMaterial.SetBuffer("_SphereBuffer", sphereBuffer);
+        
+        sphereBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, spheres.Length, sizeof(float) * 25);
+        
+        if (spheres.Length > 0)
+        {
+            sphereBuffer.SetData(spheres);
+            RayMarchingMaterial.SetBuffer("_SphereBuffer", sphereBuffer);
+            RayMarchingMaterial.SetInt("_SphereCount", sphereCount);
+        }
         
         if ( ReflectionProbe != null )
         {
